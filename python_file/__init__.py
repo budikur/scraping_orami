@@ -3,7 +3,6 @@ import bs4
 import pandas as pd
 
 products_link = []
-products_link_perpage = []
 dict_data_list = []
 
 def get_product_link(page):
@@ -14,52 +13,55 @@ def get_product_link(page):
     i=1
     for link in soup.find_all('div', class_="bottom-m-md"):
         p_links = 'https://www.orami.co.id' + link.find('a')['href']
-        products_link.append(p_links)
-        products_link_perpage.append(p_links)
+        dict_link = {
+            'Product Link': p_links
+        }
+        products_link.append(dict_link)
         print(i,p_links)
         i+=1
-    print(i)
-    # print(products_link)
-    if products_link_perpage == []:
-        print("No more products")
-        print('Total products: ',len(products_link))
-        return
-    products_link_perpage.clear()
-    page+=1
-    get_product_link(page)
 
-def detail_products():
+    if products_link == []:
+        print("No more products")
+        # print('Total products: ',len(products_link))
+        return
+    df1 = pd.DataFrame(products_link)
+    df1.to_csv('/media/data/remoteworkerid/python/scraping_orami/csv_file/Link_products_page-'+ str(page) +'.csv',index=False,encoding='utf-8')
+
+def detail_products(page):
     i=1
     for link in products_link:
-        response = requests.get(link)
+        response = requests.get(link['Product Link'])
         soup = bs4.BeautifulSoup(response.text,features="html.parser")
-        # print(soup)
-        products_name = soup.find('h1',attrs={'class': 'prod-detail-title mb-8'}).text
-        print(products_name)
-        # price = soup.find('div',attrs={'class': 'prod-detail-price  '})
+        products_name = soup.find('h1',attrs={'class': 'prod-detail-title mb-8 loading'}).text
+        print(i,products_name)
+        price = soup.find('div',attrs={'class': 'prod-detail-price loading'}).text
         # print(price)
-        # stock = soup.find('div',attrs={'class': 'd-flex prod-detail-stock ml-auto '}).text
+        stock = soup.find('div',attrs={'class': 'd-flex prod-detail-stock ml-auto loading'}).text
         # print(stock)
-        # image = soup.find('img')['src']
+        image = soup.find('meta', attrs={'property': 'og:image'})['content']
         # print(image)
-        # # description =
-        # dict_data = {
-        #     'Product name' : products_name,
-        #     'Price': price,
-        #     'Stock': stock,
-        #     'Image': image
-        # }
-        # dict_data_list.append(dict_data)
-        # print(dict_data_list)
-        if i==3:
-            break
+        prod_link = link['Product Link']
+        dict_data = {
+            'Product name' : products_name,
+            'Price': price,
+            'Stock': stock,
+            'Image': image,
+            'Link': prod_link
+        }
+        dict_data_list.append(dict_data)
+        # if i==3:
+        #     break
         i+=1
-
-# def testing():
-#     print('testing')
+    # print(dict_data_list)
+    df2 = pd.DataFrame(dict_data_list)
+    df2.to_csv('/media/data/remoteworkerid/python/scraping_orami/csv_file/Detail_products_page-'+ str(page) +'.csv', index=False, encoding='utf-8')
 
 if __name__ == '__main__':
-    page = 20
+    page = 17
     get_product_link(page)
-    detail_products()
-    # testing()
+    while products_link != []:
+        detail_products(page)
+        page+=1
+        products_link.clear()
+        dict_data_list.clear()
+        get_product_link(page)
